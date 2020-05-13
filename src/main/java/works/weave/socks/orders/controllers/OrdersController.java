@@ -7,9 +7,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.mvc.TypeReferences;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import works.weave.socks.orders.config.OrdersConfigurationProperties;
 import works.weave.socks.orders.entities.*;
@@ -56,7 +58,6 @@ public class OrdersController {
             if (item.address == null || item.customer == null || item.card == null || item.items == null) {
                 throw new InvalidOrderException("Invalid order request. Order requires customer, address, card and items.");
             }
-
 
             LOG.debug("Starting calls");
             Future<Resource<Address>> addressFuture = asyncGetService.getResource(item.address, new TypeReferences
@@ -134,22 +135,27 @@ public class OrdersController {
         return matcher.group(0);
     }
 
+    @ResponseStatus(HttpStatus.OK)
+    @RequestMapping(path = "/orders/{id}", method = RequestMethod.DELETE)
+    public
+    void deleteOrder(@PathVariable String id) {
+        LOG.info("el ID: " + id);
+        customerOrderRepository.delete(id);
+    }
+
 //    TODO: Add link to shipping
-//    @RequestMapping(method = RequestMethod.GET, value = "/orders")
-//    public @ResponseBody
-//    ResponseEntity<?> getOrders() {
-//        List<CustomerOrder> customerOrders = customerOrderRepository.findAll();
-//
-//        Resources<CustomerOrder> resources = new Resources<>(customerOrders);
-//
-//        resources.forEach(r -> r);
-//
-//        resources.add(linkTo(methodOn(ShippingController.class, CustomerOrder.getShipment::ge)).withSelfRel());
-//
-//        // add other links as needed
-//
-//        return ResponseEntity.ok(resources);
-//    }
+/*    @ResponseStatus(HttpStatus.OK)
+    @RequestMapping(method = RequestMethod.GET, value = "/orders")
+    public @ResponseBody
+    ResponseEntity<?> getOrders() {
+        List<CustomerOrder> customerOrders = customerOrderRepository.findAll();
+
+        Resources<CustomerOrder> resources = new Resources<>(customerOrders);
+
+        // add other links as needed
+
+        return ResponseEntity.ok(resources);
+    }*/
 
     private float calculateTotal(List<Item> items) {
         float amount = 0F;

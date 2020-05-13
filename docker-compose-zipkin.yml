@@ -2,7 +2,7 @@ version: '2'
 
 services:
   orders:
-    image: weaveworksdemos/orders
+    image: eu.gcr.io/optimum-mode-272714/orders
     hostname: orders
     restart: always
     cap_drop:
