@@ -8,17 +8,17 @@ public class PaymentRequest {
     private Address address;
     private Card card;
     private Customer customer;
-    private float amount;
+    private float value;
 
     // For jackson
     public PaymentRequest() {
     }
 
-    public PaymentRequest(Address address, Card card, Customer customer, float amount) {
+    public PaymentRequest(Address address, Card card, Customer customer, float value) {
         this.address = address;
         this.customer = customer;
         this.card = card;
-        this.amount = amount;
+        this.value = value;
     }
 
     @Override
@@ -54,11 +54,11 @@ public class PaymentRequest {
         this.customer = customer;
     }
 
-    public float getAmount() {
-        return amount;
+    public float getValue() {
+        return value;
     }
 
-    public void setAmount(float amount) {
-        this.amount = amount;
+    public void setValue(float value) {
+        this.value = value;
     }
 }
