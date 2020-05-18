@@ -17,6 +17,7 @@ import works.weave.socks.orders.config.OrdersConfigurationProperties;
 import works.weave.socks.orders.entities.*;
 import works.weave.socks.orders.repositories.CustomerOrderRepository;
 import works.weave.socks.orders.resources.NewOrderResource;
+import works.weave.socks.orders.resources.UpdateOrderResource;
 import works.weave.socks.orders.services.AsyncGetService;
 import works.weave.socks.orders.values.PaymentRequest;
 import works.weave.socks.orders.values.PaymentResponse;
@@ -135,12 +136,21 @@ public class OrdersController {
         return matcher.group(0);
     }
 
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping(path = "/orders/{id}", method = RequestMethod.DELETE)
     public
     void deleteOrder(@PathVariable String id) {
         LOG.info("el ID: " + id);
         customerOrderRepository.delete(id);
+    }
+
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @RequestMapping(path = "/orders/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.PATCH)
+    public
+    void updateOrder(@PathVariable String id , @RequestBody UpdateOrderResource body) {
+        LOG.info("el ID: " + id);
+        CustomerOrder order = customerOrderRepository.findOne(id);
+        order.setArriveDate(body.arrivalDate);
     }
 
 //    TODO: Add link to shipping
