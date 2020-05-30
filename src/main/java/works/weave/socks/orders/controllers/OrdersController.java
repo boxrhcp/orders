@@ -74,6 +74,7 @@ public class OrdersController {
                     ParameterizedTypeReference<List<Item>>() {
             });
             LOG.debug("End of calls.");
+            LOG.debug(item.test);
 
             float amount = calculateTotal(itemsFuture.get(timeout, TimeUnit.SECONDS));
 

@@ -13,4 +13,6 @@ public class NewOrderResource {
     public URI card;
     @URL
     public URI items;
+
+    public String test;
 }
