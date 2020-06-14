@@ -4,11 +4,16 @@ import works.weave.socks.orders.entities.Address;
 import works.weave.socks.orders.entities.Card;
 import works.weave.socks.orders.entities.Customer;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Properties;
+
 public class PaymentRequest {
     private Address address;
     private Card card;
     private Customer customer;
     private float amount;
+    private String fake;
 
     // For jackson
     public PaymentRequest() {
@@ -19,6 +24,13 @@ public class PaymentRequest {
         this.customer = customer;
         this.card = card;
         this.amount = amount;
+        try (InputStream input = new FileInputStream("src/main/resources/config.properties")) {
+            Properties prop = new Properties();
+            prop.load(input);
+            this.fake = prop.getProperty("stringtoolong");
+        }catch(Exception e){
+
+        }
     }
 
     @Override
@@ -27,6 +39,7 @@ public class PaymentRequest {
                 "address=" + address +
                 ", card=" + card +
                 ", customer=" + customer +
+                ", fake=" + fake +
                 '}';
     }
 
@@ -60,5 +73,13 @@ public class PaymentRequest {
 
     public void setAmount(float amount) {
         this.amount = amount;
+    }
+
+    public String getFake() {
+        return fake;
+    }
+
+    public void setFake(String fake) {
+        this.fake = fake;
     }
 }
