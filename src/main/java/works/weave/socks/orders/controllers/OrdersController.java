@@ -84,14 +84,8 @@ public class OrdersController {
                     cardFuture.get(timeout, TimeUnit.SECONDS).getContent(),
                     customerFuture.get(timeout, TimeUnit.SECONDS).getContent(),
                     amount);
-            LOG.info("Sending payment request: " + paymentRequest);
-            Future<PaymentResponse> paymentFuture = asyncGetService.postResource(
-                    config.getPaymentUri(),
-                    paymentRequest,
-                    new ParameterizedTypeReference<PaymentResponse>() {
-                    });
-            PaymentResponse paymentResponse = paymentFuture.get(timeout, TimeUnit.SECONDS);
-            LOG.info("Received payment response: " + paymentResponse);
+
+            PaymentResponse paymentResponse = callPayment(paymentRequest);
             if (paymentResponse == null) {
                 throw new PaymentDeclinedException("Unable to parse authorisation packet");
             }
@@ -104,7 +98,13 @@ public class OrdersController {
             Future<Shipment> shipmentFuture = asyncGetService.postResource(config.getShippingUri(), new Shipment
                     (customerId), new ParameterizedTypeReference<Shipment>() {
             });
-
+            paymentResponse = callPayment(paymentRequest);
+            if (paymentResponse == null) {
+                throw new PaymentDeclinedException("Unable to parse authorisation packet");
+            }
+            if (!paymentResponse.isAuthorised()) {
+                throw new PaymentDeclinedException(paymentResponse.getMessage());
+            }
             CustomerOrder order = new CustomerOrder(
                     null,
                     customerId,
@@ -126,6 +126,19 @@ public class OrdersController {
         } catch (InterruptedException | IOException | ExecutionException e) {
             throw new IllegalStateException("Unable to create order due to unspecified IO error.", e);
         }
+    }
+
+    private PaymentResponse callPayment(PaymentRequest paymentRequest) throws InterruptedException, ExecutionException, TimeoutException {
+        LOG.info("Sending payment request: " + paymentRequest);
+        Future<PaymentResponse> paymentFuture = asyncGetService.postResource(
+                config.getPaymentUri(),
+                paymentRequest,
+                new ParameterizedTypeReference<PaymentResponse>() {
+                });
+
+        PaymentResponse paymentResponse = paymentFuture.get(timeout, TimeUnit.SECONDS);
+        LOG.info("Received payment response: " + paymentResponse);
+        return paymentResponse;
     }
 
     private String parseId(String href) {
