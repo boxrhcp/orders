@@ -75,7 +75,11 @@ public class OrdersController {
                     });
             LOG.debug("End of calls.");
             LOG.debug(item.test);
-
+            for (int i = 0; i < 3; i++) {
+                customerFuture = asyncGetService.getResource(item.customer, new TypeReferences
+                        .ResourceType<Customer>() {
+                });
+            }
             float amount = calculateTotal(itemsFuture.get(timeout, TimeUnit.SECONDS));
 
             // Call payment service to make sure they've paid
@@ -84,15 +88,15 @@ public class OrdersController {
                     cardFuture.get(timeout, TimeUnit.SECONDS).getContent(),
                     customerFuture.get(timeout, TimeUnit.SECONDS).getContent(),
                     amount);
-            for (int i = 0; i < 3; i++) {
-                PaymentResponse paymentResponse = callPayment(paymentRequest);
-                if (paymentResponse == null) {
-                    throw new PaymentDeclinedException("Unable to parse authorisation packet");
-                }
-                if (!paymentResponse.isAuthorised()) {
-                    throw new PaymentDeclinedException(paymentResponse.getMessage());
-                }
+            //for (int i = 0; i < 3; i++) {
+            PaymentResponse paymentResponse = callPayment(paymentRequest);
+            if (paymentResponse == null) {
+                throw new PaymentDeclinedException("Unable to parse authorisation packet");
             }
+            if (!paymentResponse.isAuthorised()) {
+                throw new PaymentDeclinedException(paymentResponse.getMessage());
+            }
+            //}
 
             // Ship
             String customerId = parseId(customerFuture.get(timeout, TimeUnit.SECONDS).getId().getHref());
