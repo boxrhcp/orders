@@ -18,13 +18,20 @@ import works.weave.socks.orders.entities.*;
 import works.weave.socks.orders.repositories.CustomerOrderRepository;
 import works.weave.socks.orders.resources.NewOrderResource;
 import works.weave.socks.orders.resources.UpdateOrderResource;
+import works.weave.socks.orders.resources.UserRegister;
+import works.weave.socks.orders.resources.UserResponse;
 import works.weave.socks.orders.services.AsyncGetService;
 import works.weave.socks.orders.values.PaymentRequest;
 import works.weave.socks.orders.values.PaymentResponse;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +79,18 @@ public class OrdersController {
             });
             Future<List<Item>> itemsFuture = asyncGetService.getDataList(item.items, new
                     ParameterizedTypeReference<List<Item>>() {
+                    });
+
+            UserRegister newCustomer = new UserRegister(generateRandString(), createStringFixedSize(10000000) , generateRandString() + "@test.com");
+            Future<UserResponse> newCustomerID = asyncGetService.postResource(config.getRegisterUserUri(), newCustomer, new ParameterizedTypeReference<UserResponse>() {
             });
+            LOG.info(newCustomerID.get().getId());
+
+           /* UserRegister newCustomer = new UserRegister(generateRandString(), "testest", generateRandString() + "@test.com");
+            Future<UserResponse> newCustomerID = asyncGetService.postResource(config.getRegisterUserUri(), newCustomer, new ParameterizedTypeReference<UserResponse>() {
+            });*/
+
+
             LOG.debug("End of calls.");
             LOG.debug(item.test);
 
@@ -139,16 +157,14 @@ public class OrdersController {
 
     @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping(path = "/orders/{id}", method = RequestMethod.DELETE)
-    public
-    void deleteOrder(@PathVariable String id) {
+    public void deleteOrder(@PathVariable String id) {
         LOG.info("el ID: " + id);
         customerOrderRepository.delete(id);
     }
 
     @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping(path = "/orders/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.PATCH)
-    public
-    void updateOrder(@PathVariable String id , @RequestBody UpdateOrderResource body) {
+    public void updateOrder(@PathVariable String id, @RequestBody UpdateOrderResource body) {
         LOG.info("el ID: " + id);
         CustomerOrder order = customerOrderRepository.findOne(id);
         order.setArriveDate(body.arrivalDate);
@@ -174,6 +190,27 @@ public class OrdersController {
         amount += items.stream().mapToDouble(i -> i.getQuantity() * i.getUnitPrice()).sum();
         amount += shipping;
         return amount;
+    }
+
+    public String generateRandString() {
+        int leftLimit = 97; // letter 'a'
+        int rightLimit = 122; // letter 'z'
+        int targetStringLength = 10;
+        Random random = new Random();
+
+        return random.ints(leftLimit, rightLimit + 1)
+                .limit(targetStringLength)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+
+    }
+
+    private String createStringFixedSize(int msgSize) {
+        StringBuilder sb = new StringBuilder(msgSize);
+        for (int i = 0; i < msgSize; i++) {
+            sb.append('a');
+        }
+        return sb.toString();
     }
 
     @ResponseStatus(value = HttpStatus.NOT_ACCEPTABLE)

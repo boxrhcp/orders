@@ -16,6 +16,10 @@ public class OrdersConfigurationProperties {
         return new ServiceUri(new Hostname("shipping"), new Domain(domain), "/shipping").toUri();
     }
 
+    public URI getRegisterUserUri() {
+        return new ServiceUri(new Hostname("user"), new Domain(domain), "/register").toUri();
+    }
+
     public void setDomain(String domain) {
         this.domain = domain;
     }
