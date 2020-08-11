@@ -38,6 +38,8 @@ public class CustomerOrder {
 
     private float total;
 
+    private Date arriveDate;
+
     public CustomerOrder() {
     }
 
@@ -52,6 +54,10 @@ public class CustomerOrder {
         this.shipment = shipment;
         this.date = date;
         this.total = total;
+
+        Calendar calcArriveData = Calendar.getInstance();
+        calcArriveData.add(Calendar.DAY_OF_MONTH, 7);
+        arriveDate = calcArriveData.getTime();
     }
 
     @Override
@@ -64,6 +70,7 @@ public class CustomerOrder {
                 ", card=" + card +
                 ", items=" + items +
                 ", date=" + date +
+                ", arriveDate=" + arriveDate +
                 '}';
     }
 
@@ -143,5 +150,13 @@ public class CustomerOrder {
 
     public void setTotal(float total) {
         this.total = total;
+    }
+
+    public Date getArriveDate() {
+        return arriveDate;
+    }
+
+    public void setArriveDate(Date arriveDate) {
+        this.arriveDate = arriveDate;
     }
 }
