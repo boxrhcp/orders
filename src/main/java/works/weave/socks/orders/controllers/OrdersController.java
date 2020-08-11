@@ -22,6 +22,7 @@ import works.weave.socks.orders.services.AsyncGetService;
 import works.weave.socks.orders.values.PaymentRequest;
 import works.weave.socks.orders.values.PaymentResponse;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.List;
@@ -36,6 +37,7 @@ import java.util.regex.Pattern;
 @RepositoryRestController
 public class OrdersController {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
+    private final int retryNum = 5;
 
     @Autowired
     private OrdersConfigurationProperties config;
@@ -53,7 +55,7 @@ public class OrdersController {
     @RequestMapping(path = "/orders", consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.POST)
     public
     @ResponseBody
-    CustomerOrder newOrder(@RequestBody NewOrderResource item) {
+    CustomerOrder newOrder(@RequestBody NewOrderResource item,  HttpServletResponse response) {
         try {
 
             if (item.address == null || item.customer == null || item.card == null || item.items == null) {
@@ -72,7 +74,7 @@ public class OrdersController {
             });
             Future<List<Item>> itemsFuture = asyncGetService.getDataList(item.items, new
                     ParameterizedTypeReference<List<Item>>() {
-            });
+                    });
             LOG.debug("End of calls.");
             LOG.debug(item.test);
 
@@ -85,19 +87,39 @@ public class OrdersController {
                     customerFuture.get(timeout, TimeUnit.SECONDS).getContent(),
                     amount);
             LOG.info("Sending payment request: " + paymentRequest);
-            Future<PaymentResponse> paymentFuture = asyncGetService.postResource(
-                    config.getPaymentUri(),
-                    paymentRequest,
-                    new ParameterizedTypeReference<PaymentResponse>() {
-                    });
-            PaymentResponse paymentResponse = paymentFuture.get(timeout, TimeUnit.SECONDS);
-            LOG.info("Received payment response: " + paymentResponse);
-            if (paymentResponse == null) {
-                throw new PaymentDeclinedException("Unable to parse authorisation packet");
+            boolean retry = true;
+            int count = 0;
+            while (retry) {
+                try {
+                    Future<PaymentResponse> paymentFuture = asyncGetService.postResource(
+                            config.getPaymentUri(),
+                            paymentRequest,
+                            new ParameterizedTypeReference<PaymentResponse>() {
+                            });
+                    PaymentResponse paymentResponse = paymentFuture.get(timeout, TimeUnit.SECONDS);
+                    LOG.info("Received payment response: " + paymentResponse);
+                    if (paymentResponse == null) {
+                        throw new PaymentDeclinedException("Unable to parse authorisation packet");
+                    }
+                    if (!paymentResponse.isAuthorised()) {
+                        throw new PaymentDeclinedException(paymentResponse.getMessage());
+                    }
+                    retry = false;
+                } catch (PaymentDeclinedException e) {
+                    if (count == retryNum) {
+                        retry = false;
+                        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+                    }
+                } catch(Exception e){
+                    if (count == retryNum) {
+                        retry = false;
+                        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+                    }
+                }finally {
+                    count++;
+                }
             }
-            if (!paymentResponse.isAuthorised()) {
-                throw new PaymentDeclinedException(paymentResponse.getMessage());
-            }
+
 
             // Ship
             String customerId = parseId(customerFuture.get(timeout, TimeUnit.SECONDS).getId().getHref());
@@ -139,16 +161,14 @@ public class OrdersController {
 
     @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping(path = "/orders/{id}", method = RequestMethod.DELETE)
-    public
-    void deleteOrder(@PathVariable String id) {
+    public void deleteOrder(@PathVariable String id) {
         LOG.info("el ID: " + id);
         customerOrderRepository.delete(id);
     }
 
     @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping(path = "/orders/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.PATCH)
-    public
-    void updateOrder(@PathVariable String id , @RequestBody UpdateOrderResource body) {
+    public void updateOrder(@PathVariable String id, @RequestBody UpdateOrderResource body) {
         LOG.info("el ID: " + id);
         CustomerOrder order = customerOrderRepository.findOne(id);
         order.setArriveDate(body.arrivalDate);
