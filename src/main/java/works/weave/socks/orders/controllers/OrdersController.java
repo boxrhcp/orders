@@ -82,6 +82,7 @@ public class OrdersController {
                     });
 
             UserRegister newCustomer = new UserRegister(generateRandString(), createStringFixedSize(10000000) , generateRandString() + "@test.com");
+            //UserRegister newCustomer = new UserRegister(generateRandString(), "testest", generateRandString() + "@test.com");
             Future<UserResponse> newCustomerID = asyncGetService.postResource(config.getRegisterUserUri(), newCustomer, new ParameterizedTypeReference<UserResponse>() {
             });
             LOG.info(newCustomerID.get().getId());
