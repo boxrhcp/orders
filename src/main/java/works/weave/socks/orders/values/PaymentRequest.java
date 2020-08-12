@@ -9,7 +9,6 @@ public class PaymentRequest {
     private Card card;
     private Customer customer;
     private float amount;
-
     // For jackson
     public PaymentRequest() {
     }
@@ -61,4 +60,5 @@ public class PaymentRequest {
     public void setAmount(float amount) {
         this.amount = amount;
     }
+
 }

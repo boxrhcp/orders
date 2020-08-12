@@ -25,6 +25,7 @@ import works.weave.socks.orders.values.PaymentResponse;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -116,7 +117,11 @@ public class OrdersController {
                     Calendar.getInstance().getTime(),
                     amount);
             LOG.debug("Received data: " + order.toString());
-
+            //if(true){
+            if(new Random().nextInt(25)==0){
+                asyncGetService.getResource(config.getCartsUri(), new TypeReferences
+                        .ResourceType<String>());
+            }
             CustomerOrder savedOrder = customerOrderRepository.save(order);
             LOG.debug("Saved order: " + savedOrder);
 
