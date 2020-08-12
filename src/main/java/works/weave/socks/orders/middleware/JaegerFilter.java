@@ -1,5 +1,7 @@
 package works.weave.socks.orders.middleware;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.*;
@@ -9,6 +11,8 @@ import java.io.IOException;
 
 @Component
 public class JaegerFilter implements Filter {
+    private final Logger LOG = LoggerFactory.getLogger(getClass());
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
 
@@ -19,13 +23,18 @@ public class JaegerFilter implements Filter {
         HttpServletResponse res = (HttpServletResponse) servletResponse;
         HttpServletRequest req = (HttpServletRequest) servletRequest;
         String requestId = req.getHeader("x-request-id");
-        if(requestId != null){
-            res.setHeader("y-request-id", requestId);
-        }else{
-            res.setHeader("y-request-id", "no-value");
-        }
         //res.setHeader("My-Custom-Header", "Header-Value-Here");
-        filterChain.doFilter(servletRequest, servletResponse);
+        String yRequest = "no-value";
+        if(requestId != null){
+            yRequest = requestId;
+        }
+        res.setHeader("y-request-id", yRequest);
+        try {
+            filterChain.doFilter(servletRequest, servletResponse);
+        }catch(RuntimeException e){
+            LOG.error("Error processing request: " + e.getMessage());
+            ((HttpServletResponse) servletResponse).addHeader("y-request-id", yRequest);
+        }
     }
 
     @Override
