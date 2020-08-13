@@ -7,11 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.rest.webmvc.RepositoryRestController;
 import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.mvc.TypeReferences;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import works.weave.socks.orders.config.OrdersConfigurationProperties;
 import works.weave.socks.orders.entities.*;
@@ -33,11 +31,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.lang.Thread.sleep;
+
 
 @RepositoryRestController
 public class OrdersController {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
-    private final int retryNum = 5;
+    private final int retryNum = 2;
 
     @Autowired
     private OrdersConfigurationProperties config;
@@ -79,7 +79,7 @@ public class OrdersController {
             LOG.debug(item.test);
 
             float amount = calculateTotal(itemsFuture.get(timeout, TimeUnit.SECONDS));
-
+            String customerId = parseId(customerFuture.get(timeout, TimeUnit.SECONDS).getId().getHref());
             // Call payment service to make sure they've paid
             PaymentRequest paymentRequest = new PaymentRequest(
                     addressFuture.get(timeout, TimeUnit.SECONDS).getContent(),
@@ -107,13 +107,15 @@ public class OrdersController {
                     retry = false;
                 } catch (PaymentDeclinedException e) {
                     if (count == retryNum) {
-                        retry = false;
-                        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        throw e;
+                    }else{
+                        sleep(500);
                     }
                 } catch(Exception e){
                     if (count == retryNum) {
-                        retry = false;
-                        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+                        throw e;
+                    }else{
+                        sleep(500);
                     }
                 }finally {
                     count++;
@@ -122,7 +124,7 @@ public class OrdersController {
 
 
             // Ship
-            String customerId = parseId(customerFuture.get(timeout, TimeUnit.SECONDS).getId().getHref());
+
             Future<Shipment> shipmentFuture = asyncGetService.postResource(config.getShippingUri(), new Shipment
                     (customerId), new ParameterizedTypeReference<Shipment>() {
             });
