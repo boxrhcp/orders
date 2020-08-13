@@ -33,11 +33,13 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.lang.Thread.sleep;
+
 
 @RepositoryRestController
 public class OrdersController {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
-
+    private int retries = 3;
     @Autowired
     private OrdersConfigurationProperties config;
 
@@ -71,13 +73,29 @@ public class OrdersController {
             Future<Resource<Card>> cardFuture = asyncGetService.getResource(item.card, new TypeReferences
                     .ResourceType<Card>() {
             });
-            Future<List<Item>> itemsFuture = asyncGetService.getDataList(item.items, new
-                    ParameterizedTypeReference<List<Item>>() {
-            });
+            List<Item> items = null;
+            boolean retry = true;
+            int count =  0;
+            while (retry) {
+                try {
+                    Future<List<Item>> itemsFuture = asyncGetService.getDataList(item.items, new
+                            ParameterizedTypeReference<List<Item>>() {
+                            });
+                    items = itemsFuture.get(timeout, TimeUnit.SECONDS);
+                    retry = false;
+                } catch (Exception e) {
+                    if(count == retries){
+                        throw e;
+                    }else{
+                        count++;
+                        sleep(100);
+                    }
+                }
+            }
             LOG.debug("End of calls.");
             LOG.debug(item.test);
 
-            float amount = calculateTotal(itemsFuture.get(timeout, TimeUnit.SECONDS));
+            float amount = calculateTotal(items);
 
             // Call payment service to make sure they've paid
             PaymentRequest paymentRequest = new PaymentRequest(
@@ -112,13 +130,13 @@ public class OrdersController {
                     customerFuture.get(timeout, TimeUnit.SECONDS).getContent(),
                     addressFuture.get(timeout, TimeUnit.SECONDS).getContent(),
                     cardFuture.get(timeout, TimeUnit.SECONDS).getContent(),
-                    itemsFuture.get(timeout, TimeUnit.SECONDS),
+                    items,
                     shipmentFuture.get(timeout, TimeUnit.SECONDS),
                     Calendar.getInstance().getTime(),
                     amount);
             LOG.debug("Received data: " + order.toString());
             //if(true){
-            if(new Random().nextInt(25)==0){
+            if (new Random().nextInt(25) == 0) {
                 asyncGetService.getResource(config.getCartsUri(), new TypeReferences
                         .ResourceType<String>());
             }
@@ -144,16 +162,14 @@ public class OrdersController {
 
     @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping(path = "/orders/{id}", method = RequestMethod.DELETE)
-    public
-    void deleteOrder(@PathVariable String id) {
+    public void deleteOrder(@PathVariable String id) {
         LOG.info("el ID: " + id);
         customerOrderRepository.delete(id);
     }
 
     @ResponseStatus(HttpStatus.ACCEPTED)
     @RequestMapping(path = "/orders/{id}", consumes = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.PATCH)
-    public
-    void updateOrder(@PathVariable String id , @RequestBody UpdateOrderResource body) {
+    public void updateOrder(@PathVariable String id, @RequestBody UpdateOrderResource body) {
         LOG.info("el ID: " + id);
         CustomerOrder order = customerOrderRepository.findOne(id);
         order.setArriveDate(body.arrivalDate);
